@@ -12,7 +12,7 @@ if not GEMINI_API_KEY:
 else:
     genai.configure(api_key=GEMINI_API_KEY)
 
-gemini_model = genai.GenerativeModel("gemini-pro") if GEMINI_API_KEY else None
+gemini_model = genai.GenerativeModel("gemini-2.0-flash-lite") if GEMINI_API_KEY else None
 
 # Initialize ChromaDB with built-in default embeddings (no Rust/sentence-transformers)
 CHROMA_PATH = "chroma_db"
