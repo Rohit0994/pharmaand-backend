@@ -1,17 +1,18 @@
 import chromadb
-from groq import Groq
+import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
 # Load environment variables (.env for local, HF Secrets for production)
 load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not GROQ_API_KEY:
-    print("⚠️ WARNING: GROQ_API_KEY not set. Add it as a secret in HF Spaces settings.")
+if not GEMINI_API_KEY:
+    print("⚠️ WARNING: GEMINI_API_KEY not set. Add it as a secret in HF Spaces settings.")
+else:
+    genai.configure(api_key=GEMINI_API_KEY)
 
-groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+gemini_model = genai.GenerativeModel("gemini-pro") if GEMINI_API_KEY else None
 
 # Initialize ChromaDB with built-in default embeddings (no Rust/sentence-transformers)
 CHROMA_PATH = "chroma_db"
@@ -33,9 +34,9 @@ def search_documents(query, top_k=3):
     return documents
 
 def generate_answer(query, documents):
-    """Generate answer using Groq."""
-    if not groq_client:
-        return "Backend configuration error: GROQ_API_KEY is not set. Please add it in HF Spaces secrets."
+    """Generate answer using Google Gemini."""
+    if not gemini_model:
+        return "Backend configuration error: GEMINI_API_KEY is not set. Please add it in HF Spaces secrets."
 
     context = "\n\n".join([f"Source: {doc['source']}\n{doc['content']}" for doc in documents])
 
@@ -50,11 +51,8 @@ USER QUESTION: {query}
 
 Please provide a clear, helpful answer based on the context. If the context doesn't contain relevant information, say so politely."""
 
-    response = groq_client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+    response = gemini_model.generate_content(prompt)
+    return response.text
 
 def ask_question(question):
     """Complete RAG pipeline: search + answer."""
