@@ -32,12 +32,7 @@ class QuestionResponse(BaseModel):
 async def root():
     return {
         "status": "ok",
-        "service": "Pharmaand RAG Backend",
-        "version": "1.0.0",
-        "endpoints": {
-            "ask": "POST /ask",
-            "health": "GET /health"
-        }
+        "message": "Pharmaand RAG Backend is running"
     }
 
 # Health check endpoint
