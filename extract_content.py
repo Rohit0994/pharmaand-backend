@@ -1,0 +1,58 @@
+import os
+import json
+from pathlib import Path
+from bs4 import BeautifulSoup
+
+# Path to the Pharmaand website folder
+# When running in Docker, html files are in the 'website' subfolder
+# When running locally, use the full path
+import sys
+if sys.platform == "win32":
+    WEBSITE_PATH = r"C:\Users\RohitSharma\OneDrive - pharmaand GmbH\Rohit\AI Work\Pharmaand Website\Pharmaand"
+else:
+    WEBSITE_PATH = "website"
+OUTPUT_FILE = "content/data.json"
+
+def extract_html_content():
+    """Extract text content from all HTML files in the website folder."""
+    content_dict = {}
+    
+    # Create output directory if it doesn't exist
+    os.makedirs("content", exist_ok=True)
+    
+    # Find all HTML files
+    html_files = list(Path(WEBSITE_PATH).glob("*.html"))
+    
+    if not html_files:
+        print(f"❌ No HTML files found in {WEBSITE_PATH}")
+        return
+    
+    print(f"📄 Found {len(html_files)} HTML files")
+    
+    for html_file in html_files:
+        try:
+            with open(html_file, "r", encoding="utf-8") as f:
+                soup = BeautifulSoup(f.read(), "html.parser")
+            
+            # Remove script and style elements
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            # Get text and clean it
+            text = soup.get_text(separator="\n", strip=True)
+            text = "\n".join(line.strip() for line in text.split("\n") if line.strip())
+            
+            content_dict[html_file.stem] = text
+            print(f"✓ {html_file.name}: {len(text)} characters extracted")
+        
+        except Exception as e:
+            print(f"✗ Error processing {html_file.name}: {e}")
+    
+    # Save to JSON
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(content_dict, f, ensure_ascii=False, indent=2)
+    
+    print(f"\n✅ Content extracted and saved to {OUTPUT_FILE}")
+
+if __name__ == "__main__":
+    extract_html_content()

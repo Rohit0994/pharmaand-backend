@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact — pharma&</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="container nav-wrap">
+      <a href="index.html" class="logo"><span class="logo-text">pharma<span class="amp">&amp;</span></span></a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+      <nav class="primary-nav" id="primaryNav">
+        <ul>
+          <li><a href="about.html">About Us</a></li>
+          <li><a href="products.html">Products</a></li>
+          <li><a href="innovation.html">Innovation</a></li>
+          <li><a href="medicines.html">Medicines</a></li>
+          <li><a href="patients.html">Patients</a></li>
+          <li><a href="news.html">News</a></li>
+          <li><a href="faqs.html">FAQs</a></li>
+          <li><a href="contact.html" class="nav-cta">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-banner">
+    <div class="container">
+      <span class="eyebrow" style="color:#d8c5ee;">Get in touch</span>
+      <h1>Contact us</h1>
+      <p>Whether you're a healthcare professional, a partner, a patient, or a journalist — we'd love to hear from you.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="contact-grid">
+        <div class="reveal">
+          <h2>Send us a message</h2>
+          <form id="contactForm" novalidate>
+            <div class="form-group">
+              <label for="name">Full name</label>
+              <input type="text" id="name" name="name" required />
+            </div>
+            <div class="form-group">
+              <label for="email">Email address</label>
+              <input type="email" id="email" name="email" required />
+            </div>
+            <div class="form-group">
+              <label for="role">I am a…</label>
+              <select id="role" name="role">
+                <option>Patient or family member</option>
+                <option>Healthcare professional</option>
+                <option>Business partner</option>
+                <option>Member of the press</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="subject">Subject</label>
+              <input type="text" id="subject" name="subject" />
+            </div>
+            <div class="form-group">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Send message</button>
+            <p id="formStatus" style="margin-top:1rem;"></p>
+          </form>
+        </div>
+
+        <div class="reveal delay-1">
+          <div class="contact-info">
+            <h3>Reach us directly</h3>
+            <p><strong>General inquiries</strong><br />info@pharmaand-clone.example</p>
+            <p><strong>Medical information</strong><br />medinfo@pharmaand-clone.example</p>
+            <p><strong>Pharmacovigilance</strong><br />pv@pharmaand-clone.example</p>
+            <p><strong>Press &amp; media</strong><br />press@pharmaand-clone.example</p>
+            <p><strong>Headquarters</strong><br />1234 Demo Street<br />City, Country</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-col"><span class="logo-text">pharma<span class="amp">&amp;</span></span><p>Preserving access to essential medicines worldwide.</p></div>
+      <div class="footer-col"><h4>Company</h4><ul><li><a href="about.html">About Us</a></li><li><a href="news.html">News</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+      <div class="footer-col"><h4>Explore</h4><ul><li><a href="products.html">Products</a></li><li><a href="innovation.html">Innovation</a></li><li><a href="medicines.html">Medicines</a></li><li><a href="patients.html">Patients</a></li></ul></div>
+      <div class="footer-col"><h4>Resources</h4><ul><li><a href="faqs.html">FAQs</a></li><li><a href="#">Imprint</a></li><li><a href="#">Disclaimer</a></li><li><a href="#">Privacy Policy</a></li></ul></div>
+    </div>
+    <div class="footer-bottom"><div class="container"><p>© <span id="currentYear">2026</span> pharma& clone — demo template</p></div></div>
+  </footer>
+  <script src="js/main.js"></script>
+<script src="js/chatbot.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+google-genai
+chromadb
+python-dotenv
+beautifulsoup4
+langchain-text-splitters
