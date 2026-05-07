@@ -3,14 +3,15 @@ from google import genai
 from dotenv import load_dotenv
 import os
 
-# Load environment variables
+# Load environment variables (.env for local, HF Secrets for production)
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY not found in .env file")
+    # Don't crash on startup — fail gracefully at request time
+    print("⚠️ WARNING: GEMINI_API_KEY not set. Add it as a secret in HF Spaces settings.")
 
-gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 # Initialize ChromaDB with built-in default embeddings (no Rust/sentence-transformers)
 CHROMA_PATH = "chroma_db"
@@ -33,6 +34,9 @@ def search_documents(query, top_k=3):
 
 def generate_answer(query, documents):
     """Generate answer using Gemini."""
+    if not gemini_client:
+        return "Backend configuration error: GEMINI_API_KEY is not set. Please add it in HF Spaces secrets."
+
     context = "\n\n".join([f"Source: {doc['source']}\n{doc['content']}" for doc in documents])
     
     prompt = f"""You are a helpful assistant for Pharmaand GmbH. 
