@@ -1,17 +1,17 @@
 import chromadb
-from google import genai
+from groq import Groq
 from dotenv import load_dotenv
 import os
 
 # Load environment variables (.env for local, HF Secrets for production)
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
-if not GEMINI_API_KEY:
-    # Don't crash on startup — fail gracefully at request time
-    print("⚠️ WARNING: GEMINI_API_KEY not set. Add it as a secret in HF Spaces settings.")
+if not GROQ_API_KEY:
+    print("⚠️ WARNING: GROQ_API_KEY not set. Add it as a secret in HF Spaces settings.")
 
-gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # Initialize ChromaDB with built-in default embeddings (no Rust/sentence-transformers)
 CHROMA_PATH = "chroma_db"
@@ -33,14 +33,14 @@ def search_documents(query, top_k=3):
     return documents
 
 def generate_answer(query, documents):
-    """Generate answer using Gemini."""
-    if not gemini_client:
-        return "Backend configuration error: GEMINI_API_KEY is not set. Please add it in HF Spaces secrets."
+    """Generate answer using Groq."""
+    if not groq_client:
+        return "Backend configuration error: GROQ_API_KEY is not set. Please add it in HF Spaces secrets."
 
     context = "\n\n".join([f"Source: {doc['source']}\n{doc['content']}" for doc in documents])
-    
-    prompt = f"""You are a helpful assistant for Pharmaand GmbH. 
-    
+
+    prompt = f"""You are a helpful assistant for Pharmaand GmbH.
+
 Using the following context from our website and documentation, answer the user's question:
 
 CONTEXT:
@@ -49,12 +49,12 @@ CONTEXT:
 USER QUESTION: {query}
 
 Please provide a clear, helpful answer based on the context. If the context doesn't contain relevant information, say so politely."""
-    
-    response = gemini_client.models.generate_content(
-        model="models/gemini-2.0-flash-lite",
-        contents=prompt
+
+    response = groq_client.chat.completions.create(
+        model=GROQ_MODEL,
+        messages=[{"role": "user", "content": prompt}]
     )
-    return response.text
+    return response.choices[0].message.content
 
 def ask_question(question):
     """Complete RAG pipeline: search + answer."""

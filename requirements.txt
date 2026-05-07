@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-google-genai
+groq
 chromadb
 python-dotenv
 beautifulsoup4
