@@ -1,18 +1,18 @@
 import chromadb
-import google.generativeai as genai
+import requests
+import json
 from dotenv import load_dotenv
 import os
 
 # Load environment variables (.env for local, HF Secrets for production)
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 
-if not GEMINI_API_KEY:
-    print("⚠️ WARNING: GEMINI_API_KEY not set. Add it as a secret in HF Spaces settings.")
-else:
-    genai.configure(api_key=GEMINI_API_KEY)
+if not NVIDIA_API_KEY:
+    print("⚠️ WARNING: NVIDIA_API_KEY not set. Add it as a secret in HF Spaces settings.")
 
-gemini_model = genai.GenerativeModel("gemini-2.0-flash-lite") if GEMINI_API_KEY else None
+# NVIDIA Mistral API configuration
+NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
 # Initialize ChromaDB with built-in default embeddings (no Rust/sentence-transformers)
 CHROMA_PATH = "chroma_db"
@@ -34,9 +34,9 @@ def search_documents(query, top_k=3):
     return documents
 
 def generate_answer(query, documents):
-    """Generate answer using Google Gemini."""
-    if not gemini_model:
-        return "Backend configuration error: GEMINI_API_KEY is not set. Please add it in HF Spaces secrets."
+    """Generate answer using NVIDIA Mistral API."""
+    if not NVIDIA_API_KEY:
+        return "Backend configuration error: NVIDIA_API_KEY is not set. Please add it in HF Spaces secrets."
 
     context = "\n\n".join([f"Source: {doc['source']}\n{doc['content']}" for doc in documents])
 
@@ -51,8 +51,32 @@ USER QUESTION: {query}
 
 Please provide a clear, helpful answer based on the context. If the context doesn't contain relevant information, say so politely."""
 
-    response = gemini_model.generate_content(prompt)
-    return response.text
+    headers = {
+        "Authorization": f"Bearer {NVIDIA_API_KEY}",
+        "Accept": "application/json"
+    }
+
+    payload = {
+        "model": "mistralai/mistral-small-4-119b-2603",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 1024,
+        "temperature": 0.10,
+        "top_p": 1.00,
+        "stream": False
+    }
+
+    try:
+        response = requests.post(NVIDIA_INVOKE_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        
+        if "choices" in result and len(result["choices"]) > 0:
+            return result["choices"][0]["message"]["content"]
+        else:
+            return "Error: Unexpected response format from API"
+    
+    except requests.exceptions.RequestException as e:
+        return f"Error calling NVIDIA API: {str(e)}"
 
 def ask_question(question):
     """Complete RAG pipeline: search + answer."""
