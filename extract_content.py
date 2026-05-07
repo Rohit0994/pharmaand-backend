@@ -12,9 +12,10 @@ if sys.platform == "win32":
 else:
     WEBSITE_PATH = "website"
 OUTPUT_FILE = "content/data.json"
+SITE_BASE_URL = "https://rohit0994.github.io/pharmaand_GmBH"
 
 def extract_html_content():
-    """Extract text content from all HTML files in the website folder."""
+    """Extract text content, title, and URL from all HTML files in the website folder."""
     content_dict = {}
     
     # Create output directory if it doesn't exist
@@ -34,15 +35,26 @@ def extract_html_content():
             with open(html_file, "r", encoding="utf-8") as f:
                 soup = BeautifulSoup(f.read(), "html.parser")
             
-            # Remove script and style elements
-            for script in soup(["script", "style"]):
-                script.decompose()
+            # Remove script, style, nav, header, footer
+            for tag in soup(["script", "style", "nav", "header", "footer"]):
+                tag.decompose()
+            
+            # Extract title
+            title = soup.title.string if soup.title else html_file.stem
+            title = title.strip() if title else html_file.stem
             
             # Get text and clean it
-            text = soup.get_text(separator="\n", strip=True)
-            text = "\n".join(line.strip() for line in text.split("\n") if line.strip())
+            text = soup.get_text(separator=" ", strip=True)
+            text = " ".join(text.split())  # Normalize whitespace
             
-            content_dict[html_file.stem] = text
+            # Build full URL
+            url = f"{SITE_BASE_URL}/{html_file.name}"
+            
+            content_dict[html_file.stem] = {
+                "title": title,
+                "url": url,
+                "content": text
+            }
             print(f"✓ {html_file.name}: {len(text)} characters extracted")
         
         except Exception as e:

@@ -3,6 +3,7 @@ import requests
 import json
 from dotenv import load_dotenv
 import os
+from chromadb.utils import embedding_functions
 
 # Load environment variables (.env for local, HF Secrets for production)
 load_dotenv()
@@ -14,12 +15,22 @@ if not NVIDIA_API_KEY:
 # NVIDIA Mistral API configuration
 NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
-# Initialize ChromaDB with built-in default embeddings (no Rust/sentence-transformers)
+# Initialize ChromaDB with SentenceTransformer embeddings
 CHROMA_PATH = "chroma_db"
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
-collection = chroma_client.get_or_create_collection(name="pharmaand_docs")
 
-def search_documents(query, top_k=3):
+embed_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+    model_name="all-MiniLM-L6-v2"
+)
+
+collection = chroma_client.get_or_create_collection(
+    name="pharmaand_docs",
+    embedding_function=embed_fn
+)
+
+TOP_K = 4  # Retrieve 4 documents for better context
+
+def search_documents(query, top_k=TOP_K):
     """Search ChromaDB for relevant documents."""
     results = collection.query(query_texts=[query], n_results=top_k)
     
@@ -28,28 +39,36 @@ def search_documents(query, top_k=3):
     
     documents = []
     for i, doc in enumerate(results["documents"][0]):
-        source = results["metadatas"][0][i].get("source", "unknown")
-        documents.append({"content": doc, "source": source})
+        metadata = results["metadatas"][0][i]
+        documents.append({
+            "content": doc,
+            "page": metadata.get("page", "unknown"),
+            "title": metadata.get("title", "Unknown Page"),
+            "url": metadata.get("url", "#")
+        })
     
     return documents
 
 def generate_answer(query, documents):
-    """Generate answer using NVIDIA Mistral API."""
+    """Generate answer using NVIDIA Mistral API with strict constraints."""
     if not NVIDIA_API_KEY:
         return "Backend configuration error: NVIDIA_API_KEY is not set. Please add it in HF Spaces secrets."
 
-    context = "\n\n".join([f"Source: {doc['source']}\n{doc['content']}" for doc in documents])
+    context = "\n\n".join([f"Source: {doc['title']}\n{doc['content']}" for doc in documents])
 
     prompt = f"""You are a helpful assistant for Pharmaand GmbH.
 
-Using the following context from our website and documentation, answer the user's question:
+Answer the user's question using ONLY the context provided below.
+If the context does not contain the answer, say so politely and suggest contacting support@pharmaand.com.
+Keep answers concise (2-5 sentences). Use plain language.
+Never invent products, prices, or medical advice.
 
 CONTEXT:
 {context}
 
 USER QUESTION: {query}
 
-Please provide a clear, helpful answer based on the context. If the context doesn't contain relevant information, say so politely."""
+Answer:"""
 
     headers = {
         "Authorization": f"Bearer {NVIDIA_API_KEY}",
@@ -81,7 +100,7 @@ Please provide a clear, helpful answer based on the context. If the context does
 def ask_question(question):
     """Complete RAG pipeline: search + answer."""
     print(f"🔍 Searching for relevant documents...")
-    documents = search_documents(question, top_k=3)
+    documents = search_documents(question, top_k=TOP_K)
     
     if not documents:
         return {
@@ -94,7 +113,17 @@ def ask_question(question):
     
     answer = generate_answer(question, documents)
     
-    sources = list(set([doc["source"] for doc in documents]))
+    # Deduplicate sources by URL
+    seen = set()
+    sources = []
+    for doc in documents:
+        url = doc["url"]
+        if url not in seen:
+            seen.add(url)
+            sources.append({
+                "title": doc["title"],
+                "url": url
+            })
     
     return {
         "answer": answer,

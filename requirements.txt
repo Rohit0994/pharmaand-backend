@@ -5,3 +5,4 @@ chromadb
 python-dotenv
 beautifulsoup4
 langchain-text-splitters
+sentence-transformers
