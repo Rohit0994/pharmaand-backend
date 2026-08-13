@@ -7,13 +7,19 @@ from chromadb.utils import embedding_functions
 
 # Load environment variables (.env for local, HF Secrets for production)
 load_dotenv()
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 
-if not NVIDIA_API_KEY:
-    print("⚠️ WARNING: NVIDIA_API_KEY not set. Add it as a secret in HF Spaces settings.")
+# Azure OpenAI configuration - all values come from HF Space secrets/variables.
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
+AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
 
-# NVIDIA Mistral API configuration
-NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+if not AZURE_OPENAI_API_KEY:
+    print("⚠️ WARNING: AZURE_OPENAI_API_KEY not set. Add it as a secret in HF Spaces settings.")
+if not AZURE_OPENAI_ENDPOINT:
+    print("⚠️ WARNING: AZURE_OPENAI_ENDPOINT not set (e.g. https://<resource>.openai.azure.com).")
+if not AZURE_OPENAI_DEPLOYMENT:
+    print("⚠️ WARNING: AZURE_OPENAI_DEPLOYMENT not set (the deployment name you gave the model in Azure).")
 
 # Initialize ChromaDB with SentenceTransformer embeddings
 CHROMA_PATH = "chroma_db"
@@ -50,9 +56,12 @@ def search_documents(query, top_k=TOP_K):
     return documents
 
 def generate_answer(query, documents):
-    """Generate answer using NVIDIA Mistral API with strict constraints."""
-    if not NVIDIA_API_KEY:
-        return "Backend configuration error: NVIDIA_API_KEY is not set. Please add it in HF Spaces secrets."
+    """Generate answer using Azure OpenAI Chat Completions API with strict constraints."""
+    if not (AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT):
+        return (
+            "Backend configuration error: set AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, "
+            "and AZURE_OPENAI_DEPLOYMENT in HF Spaces secrets/variables."
+        )
 
     context = "\n\n".join([f"Source: {doc['title']}\n{doc['content']}" for doc in documents])
 
@@ -71,31 +80,39 @@ USER QUESTION: {query}
 Answer:"""
 
     headers = {
-        "Authorization": f"Bearer {NVIDIA_API_KEY}",
-        "Accept": "application/json"
+        "api-key": AZURE_OPENAI_API_KEY,
+        "Content-Type": "application/json",
     }
 
+    url = (
+        f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{AZURE_OPENAI_DEPLOYMENT}"
+        f"/chat/completions?api-version={AZURE_OPENAI_API_VERSION}"
+    )
+
     payload = {
-        "model": "mistralai/mistral-small-4-119b-2603",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 1024,
         "temperature": 0.10,
         "top_p": 1.00,
-        "stream": False
+        "stream": False,
     }
 
     try:
-        response = requests.post(NVIDIA_INVOKE_URL, headers=headers, json=payload)
-        response.raise_for_status()
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        if response.status_code >= 400:
+            return (
+                f"Error calling Azure OpenAI: HTTP {response.status_code} for deployment "
+                f"'{AZURE_OPENAI_DEPLOYMENT}'. Body: {response.text[:500]}"
+            )
         result = response.json()
-        
+
         if "choices" in result and len(result["choices"]) > 0:
             return result["choices"][0]["message"]["content"]
         else:
             return "Error: Unexpected response format from API"
-    
+
     except requests.exceptions.RequestException as e:
-        return f"Error calling NVIDIA API: {str(e)}"
+        return f"Error calling Azure OpenAI: {str(e)}"
 
 def ask_question(question):
     """Complete RAG pipeline: search + answer."""
