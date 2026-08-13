@@ -8,18 +8,19 @@ from chromadb.utils import embedding_functions
 # Load environment variables (.env for local, HF Secrets for production)
 load_dotenv()
 
-# Azure OpenAI configuration - all values come from HF Space secrets/variables.
+# Azure AI Foundry v1 configuration - values come from HF Space secrets/variables.
+# ENDPOINT should be the resource root, e.g. https://pand-foundry-1.services.ai.azure.com
+# DEPLOYMENT is the deployment name from Foundry (e.g. gpt-5.4-mini-2), not the model id.
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
 AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
 
 if not AZURE_OPENAI_API_KEY:
     print("⚠️ WARNING: AZURE_OPENAI_API_KEY not set. Add it as a secret in HF Spaces settings.")
 if not AZURE_OPENAI_ENDPOINT:
-    print("⚠️ WARNING: AZURE_OPENAI_ENDPOINT not set (e.g. https://<resource>.openai.azure.com).")
+    print("⚠️ WARNING: AZURE_OPENAI_ENDPOINT not set (e.g. https://<resource>.services.ai.azure.com).")
 if not AZURE_OPENAI_DEPLOYMENT:
-    print("⚠️ WARNING: AZURE_OPENAI_DEPLOYMENT not set (the deployment name you gave the model in Azure).")
+    print("⚠️ WARNING: AZURE_OPENAI_DEPLOYMENT not set (the deployment name from Foundry).")
 
 # Initialize ChromaDB with SentenceTransformer embeddings
 CHROMA_PATH = "chroma_db"
@@ -84,14 +85,13 @@ Answer:"""
         "Content-Type": "application/json",
     }
 
-    url = (
-        f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{AZURE_OPENAI_DEPLOYMENT}"
-        f"/chat/completions?api-version={AZURE_OPENAI_API_VERSION}"
-    )
+    # Foundry v1 API: flat path, no api-version, deployment name goes in "model".
+    url = f"{AZURE_OPENAI_ENDPOINT}/openai/v1/chat/completions"
 
     payload = {
+        "model": AZURE_OPENAI_DEPLOYMENT,
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 1024,
+        "max_completion_tokens": 1024,
         "temperature": 0.10,
         "top_p": 1.00,
         "stream": False,
